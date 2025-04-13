@@ -38,17 +38,6 @@ typedef struct SStreamTask {
   int64_t         cmdId;     // ID of the current command (real-time, historical, or recalculation)
 } SStreamTask;
 
-typedef enum EStreamTriggerType {
-  STREAM_PERIODIC_TRIGGER,
-  STERAM_COMMIT_TRIGGER,
-  STREAM_WINDOW_TRIGGER,
-} EStreamTriggerType;
-
-typedef struct SStreamTriggerTask {
-  SStreamTask        task;
-  EStreamTriggerType type;
-} SStreamTriggerTask;
-
 // clang-format off
 #define stFatal(...) do { if (stDebugFlag & DEBUG_FATAL) { taosPrintLog("STM FATAL ", DEBUG_FATAL, 255,         __VA_ARGS__); }} while(0)
 #define stError(...) do { if (stDebugFlag & DEBUG_ERROR) { taosPrintLog("STM ERROR ", DEBUG_ERROR, 255,         __VA_ARGS__); }} while(0)

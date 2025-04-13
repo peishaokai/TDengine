@@ -442,6 +442,14 @@ typedef struct SPartitionBySupporter {
   bool    needCalc;       // partition by column
 } SPartitionBySupporter;
 
+typedef struct SGroupByColumnSupporter {
+  SArray*    pGroupCols;     // group by columns, SArray<SColumn>
+  SArray*    pGroupColVals;  // current group column values, SArray<SGroupKeys>
+  char*      keyBuf;         // group by keys for hash
+  SSHashObj* pGroupIds;      // map from group key to group id
+  int32_t    keyBufLen;
+} SGroupByColumnSupporter;
+
 typedef struct SPartitionDataInfo {
   uint64_t groupId;
   char*    tbname;
@@ -1245,6 +1253,10 @@ int32_t setBlockIntoRes(SStreamScanInfo* pInfo, const SSDataBlock* pBlock, STime
 int32_t generateScanRange(SStreamScanInfo* pInfo, SSDataBlock* pSrcBlock, SSDataBlock* pDestBlock, EStreamType type);
 int32_t doRangeScan(SStreamScanInfo* pInfo, SSDataBlock* pSDB, int32_t tsColIndex, int32_t* pRowIndex,
                     SSDataBlock** ppRes);
+
+int32_t grpByColSupInit(SGroupByColumnSupporter* pSup, SNodeList* pGroupKeys);
+void    grpByColSupDestroy(SGroupByColumnSupporter** ppSup);
+int32_t grpByColSupGetGroupId(SGroupByColumnSupporter* pSup, SSDataBlock* pBlock, int32_t rowIndex, int64_t* pGroupId);
 
 #ifdef __cplusplus
 }

@@ -1824,3 +1824,64 @@ _end:
   }
   return code;
 }
+
+int32_t grpByColSupInit(SGroupByColumnSupporter* pSup, SNodeList* pGroupKeys) {
+  int32_t code = TSDB_CODE_SUCCESS;
+  int32_t lino = 0;
+
+  if (pSup == NULL || pGroupKeys == NULL) {
+    goto _end;
+  }
+
+  pSup->pGroupCols = makeColumnArrayFromList(pGroupKeys);
+  QUERY_CHECK_NULL(pSup->pGroupCols, code, lino, _end, terrno);
+  code = initGroupOptrInfo(&pSup->pGroupColVals, &pSup->keyBufLen, &pSup->keyBuf, pSup->pGroupCols);
+  QUERY_CHECK_CODE(code, lino, _end);
+  pSup->pGroupIds = tSimpleHashInit(256, taosGetDefaultHashFunction(TSDB_DATA_TYPE_BINARY));
+  QUERY_CHECK_NULL(pSup->pGroupIds, code, lino, _end, terrno);
+
+_end:
+  if (code != TSDB_CODE_SUCCESS) {
+    qError("%s failed at line %d since %s", __func__, lino, tstrerror(code));
+  }
+  return code;
+}
+
+void grpByColSupDestroy(SGroupByColumnSupporter** ppSup) {
+  if (ppSup != NULL && *ppSup != NULL) {
+    taosArrayDestroy((*ppSup)->pGroupCols);
+    taosArrayDestroy((*ppSup)->pGroupColVals);
+    taosMemoryFree((*ppSup)->keyBuf);
+    tSimpleHashCleanup((*ppSup)->pGroupIds);
+    taosMemoryFree(*ppSup);
+    *ppSup = NULL;
+  }
+}
+
+int32_t grpByColSupGetGroupId(SGroupByColumnSupporter* pSup, SSDataBlock* pBlock, int32_t rowIndex, int64_t* pGroupId) {
+  int32_t code = TSDB_CODE_SUCCESS;
+  int32_t lino = 0;
+
+  QUERY_CHECK_NULL(pSup, code, lino, _end, TSDB_CODE_INVALID_PARA);
+  QUERY_CHECK_NULL(pBlock, code, lino, _end, TSDB_CODE_INVALID_PARA);
+  QUERY_CHECK_CONDITION(rowIndex >= 0 && rowIndex < pBlock->info.rows, code, lino, _end, TSDB_CODE_INVALID_PARA);
+
+  recordNewGroupKeys(pSup->pGroupCols, pSup->pGroupColVals, pBlock, rowIndex);
+  int32_t keyLen = buildGroupKeys(pSup->keyBuf, pSup->pGroupColVals);
+  QUERY_CHECK_CONDITION(keyLen <= pSup->keyBufLen, code, lino, _end, TSDB_CODE_INTERNAL_ERROR);
+  void* px = tSimpleHashGet(pSup->pGroupIds, pSup->keyBuf, keyLen);
+  if (px == NULL) {
+    int64_t groupId = calcGroupId(pSup->keyBuf, keyLen);
+    code = tSimpleHashPut(pSup->pGroupIds, pSup->keyBuf, keyLen, &groupId, sizeof(int64_t));
+    QUERY_CHECK_CODE(code, lino, _end);
+    *pGroupId = groupId;
+  } else {
+    *pGroupId = *(int64_t*)px;
+  }
+
+_end:
+  if (code != TSDB_CODE_SUCCESS) {
+    qError("%s failed at line %d since %s", __func__, lino, tstrerror(code));
+  }
+  return code;
+}

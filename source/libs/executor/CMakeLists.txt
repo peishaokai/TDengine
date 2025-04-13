@@ -17,6 +17,7 @@ target_link_libraries(executor
 target_include_directories(
   executor
   PUBLIC "${TD_SOURCE_DIR}/include/libs/executor"
+  PUBLIC "${TD_SOURCE_DIR}/include/libs/new-stream"
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/inc"
 )
 
